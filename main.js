@@ -6,16 +6,9 @@ const BODY_FIELD = "A6"
 const DATA_RANGE = "G1:K7"
 
 const SEND_MAIL = false
+var sheet = SpreadsheetApp.getActiveSheet();
 
 function myFunction() {
-    var sheet = SpreadsheetApp.getActiveSheet();
-    const rangeName = 'A2:A3';
-    // Get the values from the spreadsheet using spreadsheetId and range.
-    const values2 = sheet.getRange("a1").values;
-    var cell = SpreadsheetApp.getActive().getRange('A6').getRichTextValue();
-    Logger.log(cell);
-
-    //Logger.log(cell.getTextStyle().isBold())
     var emailTemplateTo = sheet.getRange(TO_FIELD).getValue();
     var emailTemplateSubject = sheet.getRange(SUBJECT_FIELD).getValue();
     var emailTemplateCC = sheet.getRange(CC_FIELD).getValue();
@@ -29,9 +22,8 @@ function myFunction() {
     Logger.log(emailTemplateBodyRichValue)
     //TODO: remove blank cells from data
 
-
-    var headersList = SpreadsheetApp.getActive().getRange('G1:I1').getValues()[0];
-    var values2DList = SpreadsheetApp.getActive().getRange('G2:I7').getValues();
+    dataRangeSplit = extractFirstRow(DATA_RANGE)
+    firstRow = parseInt(dataRangeSplit[2]) + 1
     Logger.log(inputData.length)
     for (var i = 0; i < inputData.length; i++){
 
@@ -48,10 +40,25 @@ function myFunction() {
       emailArgs["htmlBody"] = parseStringTemplate(richTextToHTML(emailTemplateBodyRichValue),dict)
       Logger.log(emailArgs["to"])
       Logger.log(emailArgs["htmlBody"]);
-      sendEmail({to: emailArgs["to"], name: emailArgs["name"], subject: emailArgs["subject"], htmlBody: emailArgs["htmlBody"]})
+      
+      if(sendEmail({to: emailArgs["to"], name: emailArgs["name"], subject: emailArgs["subject"], htmlBody: emailArgs["htmlBody"], cc: emailArgs["cc"],bcc: emailArgs["bcc"]})){
+        var color = "#659160"
+      } else {
+        var color = "#f26b61"
+      }
+      sheet.getRange(dataRangeSplit[1]+(firstRow+i)).setBackgroundColor(color);
 
-
+      
     }
+    Logger.log(extractFirstRow(DATA_RANGE))
+}
+
+//splits range up into array with length 5. Index 1 contains full a1 cell address. Indexes 1, 2 give column letter. Inexes 3, 4 give row number.
+//https://regex101.com/ is really helpful for regex validation
+function extractFirstRow(range) {
+  var regex = /([A-Za-z]*)(.\d*):([A-Za-z]*)(.\d*)/;
+  var arr = regex.exec(range);
+  return arr; 
 }
 
 function parseCSV (csv, dict){
@@ -64,11 +71,12 @@ function parseCSV (csv, dict){
 function sendEmail(args){
   var test = true;
   if (SEND_MAIL){
-    MailApp.sendEmail({to: args["to"],name: args["name"],subject: args["subject"],htmlBody: args["htmlBody"]});
+    MailApp.sendEmail({to: args["to"],name: args["name"],subject: args["subject"],htmlBody: args["htmlBody"], cc: args["cc"], bcc: args["bcc"]});
     test = false
   }
   if(test){test = "TEST ";}else{test = "";}
   Logger.log(test+"EMAIL SENT\nname: " + args["name"] + "\nto: " + args["to"])
+  return !test;
 }
 
 function richTextToHTML(richTextObject){
@@ -84,25 +92,20 @@ function richTextToHTML(richTextObject){
       if(textStyle.isItalic()){text = "<i>" + text +"</i>";}
       if(textStyle.isStrikethrough()){text = "<strike>" + text +"</strike>";}
       if(textStyle.isUnderline()){text = "<u>" + text +"</u>";}
-      if(text.includes("\n")){
-        Logger.log("yeeeeeeeeeee")
       text = text.replaceAll("\n", "<br>")
-      }
+      
       if(textStyle.getForegroundColor() && textStyle.getForegroundColor() != "#000000"){
         //gets hex color, can't use "textStyle.getForegroundColor()" cause returns things like "ACCENT2" which don't work outside of the sheet
         hexColor = textStyle.getForegroundColorObject().asRgbColor().asHexString()
-        //Logger.log(hexColor)
         text = "<span style='color:" + hexColor + "'>" + text +"</span>";
-        }
-        //TODO: remove styling if it is a link
-        //TODO: make links work
+      }
+      //TODO: remove styling if it is a link
       HTMLoutput += text
     }
-    //Logger.log(HTMLoutput)
     return HTMLoutput;
 }
 
-//modified function from pekaaw on StackOverflow https://stackoverflow.com/a/59084440
+//modified function from pekaaw on stackoverflow: https://stackoverflow.com/a/59084440
 function parseStringTemplate(str, obj) {
     //let parts = str.split(/\$\{(?!\d)[\wæøåÆØÅ]*\}/);
     let parts = str.split(/{(?!\d)[\wæøåÆØÅ]*\}/);
