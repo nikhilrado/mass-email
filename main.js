@@ -3,12 +3,67 @@ const SUBJECT_FIELD = "B3"
 const CC_FIELD = "B4"
 const BCC_FIELD = "B5"
 const BODY_FIELD = "A6"
-const DATA_RANGE = "G1:K7"
-
+const DATA_RANGE = "G1:K7" //date range of inputs that includes headers
 const SEND_MAIL = false
-var sheet = SpreadsheetApp.getActiveSheet();
 
-function myFunction() {
+function testt(){
+  var firstDataRowA1Notation = extractFirstRow(DATA_RANGE);
+  var ttttt = firstDataRowA1Notation[1]+(parseInt(firstDataRowA1Notation[2])+1);
+  var testToEmail = sheet.getRange(ttttt).getValue();
+  Logger.log(testToEmail);
+  Logger.log(ttttt);
+}
+
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  // Or DocumentApp or FormApp.
+  ui.createMenu('Mass Mail')
+      .addItem('Send Test Email', 'menuItem1')
+      .addSeparator()
+      .addSubMenu(ui.createMenu('Sub-menu')
+      .addItem('Second item', 'showTestEmailAlert'))
+      .addToUi();
+}
+
+function testEmailSend() {
+  myFunction(true);
+}
+
+function menuItem1() {
+  myFunction(true);
+  SpreadsheetApp.getUi() // Or DocumentApp or FormApp.
+     .alert('You clicked the first menu item!');
+}
+
+function menuItem2() {
+  SpreadsheetApp.getUi() // Or DocumentApp or FormApp.
+     .alert('You clicked the second menu item!');
+}
+
+
+function showTestEmailAlert() {
+  var ui = SpreadsheetApp.getUi(); // Same variations.
+  var firstDataRowA1Notation = extractFirstRow(DATA_RANGE);
+  var testToEmail = sheet.getRange(firstDataRowA1Notation[1]+(parseInt(firstDataRowA1Notation[2])+1)).getValue()
+  var result = ui.alert(
+     'Sending Test Email',
+     'Email will be sent to: ' + testToEmail,
+      ui.ButtonSet.YES_NO);
+
+  // Process the user's response.
+  if (result == ui.Button.YES) {
+    // User clicked "Yes".
+    ui.alert('Confirmation received.');
+  } else {
+    // User clicked "No" or X in the title bar.
+    ui.alert('Permission denied.');
+  }
+}
+
+var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Settings");
+//var sheet = SpreadsheetApp.getActiveSheet();
+
+function myFunction(sendFirstRow=false) {
     var emailTemplateTo = sheet.getRange(TO_FIELD).getValue();
     var emailTemplateSubject = sheet.getRange(SUBJECT_FIELD).getValue();
     var emailTemplateCC = sheet.getRange(CC_FIELD).getValue();
@@ -24,6 +79,11 @@ function myFunction() {
 
     dataRangeSplit = extractFirstRow(DATA_RANGE)
     firstRow = parseInt(dataRangeSplit[2]) + 1
+
+    if(sendFirstRow){
+      inputData = [inputData[0]]
+    }
+    //Logger.log([inputData[0]])
     Logger.log(inputData.length)
     for (var i = 0; i < inputData.length; i++){
 
@@ -69,6 +129,8 @@ function parseCSV (csv, dict){
 }
 
 function sendEmail(args){
+  if (!args["to"].includes("@")){return false;}  //makes sure email has @ symbol in it
+  //Logger.log(args["to"])
   var test = true;
   if (SEND_MAIL){
     MailApp.sendEmail({to: args["to"],name: args["name"],subject: args["subject"],htmlBody: args["htmlBody"], cc: args["cc"], bcc: args["bcc"]});
